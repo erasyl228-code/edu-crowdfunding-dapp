@@ -51,5 +51,24 @@ function contribute(uint256 _campaignId) public payable {
     campaign.collectedAmount += msg.value;
 }
 
+// Функция для завершения кампании
+function finalizeCampaign(uint256 _campaignId) public {
+    Campaign storage campaign = campaigns[_campaignId];
+
+    // проверка: кампания ещё не завершена
+    require(!campaign.finalized, "Campaign already finalized");
+
+    // проверка: кампания закончилась
+    require(block.timestamp > campaign.deadline, "Campaign is still active");
+
+    // если цель достигнута, отправляем средства создателю
+    if (campaign.collectedAmount >= campaign.goal) {
+        campaign.creator.transfer(campaign.collectedAmount);
+    }
+
+    // отмечаем кампанию как завершённую
+    campaign.finalized = true;
+}
+
 
 }
