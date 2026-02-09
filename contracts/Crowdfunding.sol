@@ -78,7 +78,6 @@ contract Crowdfunding {
 
         uint256 rewardAmount = 0;
 
-        // 1 ETH = 100 CRT (в токенах с decimals=18 это корректно, потому что msg.value в wei)
         if (address(rewardToken) != address(0)) {
             rewardAmount = msg.value * 100;
             rewardToken.mint(msg.sender, rewardAmount);
@@ -93,13 +92,10 @@ contract Crowdfunding {
     require(!c.finalized, "Already finalized");
     require(c.collectedAmount >= c.goal, "Goal not reached");
 
-    // optional: только создатель может завершить
     require(msg.sender == c.creator, "Only creator");
 
     c.finalized = true;
 
-    // если у тебя есть вывод денег создателю — оставь как было (call/transfer)
-    // (пример)
     (bool ok, ) = c.creator.call{value: c.collectedAmount}("");
     require(ok, "Transfer failed");
 
