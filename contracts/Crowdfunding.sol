@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "./RewardToken.sol";
+
 contract Crowdfunding {
     struct Campaign {
         string title;
@@ -12,63 +14,96 @@ contract Crowdfunding {
     }
 
     Campaign[] public campaigns;
-
     mapping(uint256 => mapping(address => uint256)) public contributions;
 
-    // Функция для создания новой краудфандинговой кампании
-function createCampaign(
-    string memory _title,
-    uint256 _goal,
-    uint256 _durationInDays
-) public {
-    // создаём новый контракт кампании
-    Campaign memory newCampaign;
-    newCampaign.title = _title;
-    newCampaign.creator = payable(msg.sender);
-    newCampaign.goal = _goal;
-    newCampaign.collectedAmount = 0;
-    newCampaign.deadline = block.timestamp + (_durationInDays * 1 days);
-    newCampaign.finalized = false;
+    RewardToken public rewardToken;
+    address public owner;
 
-    // добавляем кампанию в массив
-    campaigns.push(newCampaign);
-}
+    event CampaignCreated(uint256 indexed campaignId, address indexed creator, string title, uint256 goal, uint256 deadline);
+    event Contributed(uint256 indexed campaignId, address indexed contributor, uint256 amountWei, uint256 rewardMinted);
+    event CampaignFinalized(uint256 indexed campaignId, bool goalReached, uint256 totalCollected);
+    event RewardTokenSet(address indexed token);
 
-// Функция для внесения средств в кампанию
-function contribute(uint256 _campaignId) public payable {
-    Campaign storage campaign = campaigns[_campaignId];
-
-    // проверка: кампания ещё не завершена
-    require(block.timestamp <= campaign.deadline, "Campaign has ended");
-
-    // проверка: пользователь отправил больше 0 ETH
-    require(msg.value > 0, "You need to send some ETH");
-
-    // обновляем вклад пользователя
-    contributions[_campaignId][msg.sender] += msg.value;
-
-    // обновляем общую собранную сумму
-    campaign.collectedAmount += msg.value;
-}
-
-// Функция для завершения кампании
-function finalizeCampaign(uint256 _campaignId) public {
-    Campaign storage campaign = campaigns[_campaignId];
-
-    // проверка: кампания ещё не завершена
-    require(!campaign.finalized, "Campaign already finalized");
-
-    // проверка: кампания закончилась
-    require(block.timestamp > campaign.deadline, "Campaign is still active");
-
-    // если цель достигнута, отправляем средства создателю
-    if (campaign.collectedAmount >= campaign.goal) {
-        campaign.creator.transfer(campaign.collectedAmount);
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Not owner");
+        _;
     }
 
-    // отмечаем кампанию как завершённую
-    campaign.finalized = true;
-}
+    constructor() {
+        owner = msg.sender;
+    }
 
+    function setRewardToken(address _tokenAddress) external onlyOwner {
+        require(_tokenAddress != address(0), "Zero address");
+        require(address(rewardToken) == address(0), "Token already set");
+        rewardToken = RewardToken(_tokenAddress);
+        emit RewardTokenSet(_tokenAddress);
+    }
+
+    function createCampaign(
+        string memory _title,
+        uint256 _goal,
+        uint256 _durationInDays
+    ) external {
+        require(_goal > 0, "Goal must be > 0");
+        require(_durationInDays > 0, "Duration must be > 0");
+        require(bytes(_title).length > 0, "Title required");
+
+        uint256 deadline = block.timestamp + (_durationInDays * 1 days);
+
+        campaigns.push(
+            Campaign({
+                title: _title,
+                creator: payable(msg.sender),
+                goal: _goal,
+                collectedAmount: 0,
+                deadline: deadline,
+                finalized: false
+            })
+        );
+
+        emit CampaignCreated(campaigns.length - 1, msg.sender, _title, _goal, deadline);
+    }
+
+    function contribute(uint256 _campaignId) external payable {
+        require(_campaignId < campaigns.length, "Invalid campaignId");
+
+        Campaign storage campaign = campaigns[_campaignId];
+        require(block.timestamp <= campaign.deadline, "Campaign ended");
+        require(!campaign.finalized, "Campaign finalized");
+        require(msg.value > 0, "Send some ETH");
+
+        contributions[_campaignId][msg.sender] += msg.value;
+        campaign.collectedAmount += msg.value;
+
+        uint256 rewardAmount = 0;
+
+        // 1 ETH = 100 CRT (в токенах с decimals=18 это корректно, потому что msg.value в wei)
+        if (address(rewardToken) != address(0)) {
+            rewardAmount = msg.value * 100;
+            rewardToken.mint(msg.sender, rewardAmount);
+        }
+
+        emit Contributed(_campaignId, msg.sender, msg.value, rewardAmount);
+    }
+
+   function finalizeCampaign(uint256 _campaignId) external {
+    Campaign storage c = campaigns[_campaignId];
+
+    require(!c.finalized, "Already finalized");
+    require(c.collectedAmount >= c.goal, "Goal not reached");
+
+    // optional: только создатель может завершить
+    require(msg.sender == c.creator, "Only creator");
+
+    c.finalized = true;
+
+    // если у тебя есть вывод денег создателю — оставь как было (call/transfer)
+    // (пример)
+    (bool ok, ) = c.creator.call{value: c.collectedAmount}("");
+    require(ok, "Transfer failed");
+
+    emit CampaignFinalized(_campaignId, true, c.collectedAmount);
+}
 
 }
