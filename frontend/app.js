@@ -59,7 +59,6 @@ async function connect() {
 
 async function checkNetwork() {
   const network = await provider.getNetwork();
-  // Sepolia chainId = 11155111
   if (Number(network.chainId) !== 11155111) {
     $("network").textContent = `Wrong network: ${network.chainId} (switch to Sepolia)`;
     $("network").className = "bad";
@@ -93,8 +92,6 @@ async function refreshBalances() {
 
 async function loadCampaigns() {
   $("campaigns").innerHTML = "";
-  // We don’t have campaigns.length in ABI; simplest is: try IDs 0..N until fail
-  // For demo: scan first 20 campaigns.
   const maxScan = 20;
 
   for (let i = 0; i < maxScan; i++) {
@@ -102,7 +99,6 @@ async function loadCampaigns() {
       const c = await crowdfunding.campaigns(i);
       renderCampaign(i, c);
     } catch (e) {
-      // stop on first missing id
       break;
     }
   }
@@ -196,7 +192,6 @@ async function createCampaign() {
   if (!goalEth) return alert("Goal ETH required");
   if (!days) return alert("Duration days required");
 
-  // goal should be in wei in your contract
   const goalWei = ethers.parseEther(goalEth);
 
   try {
