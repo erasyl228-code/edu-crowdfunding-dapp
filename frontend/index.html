@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Educational Crowdfunding DApp</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="top">
+      <div>
+        <h1>Educational Crowdfunding DApp</h1>
+        <div class="muted">Sepolia testnet only</div>
+      </div>
+      <div class="top-actions">
+        <button id="connectBtn" class="btn">Connect MetaMask</button>
+        <button id="refreshBtn" class="btn secondary">Refresh</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row">
+        <div>
+          <div class="k">Status</div>
+          <div id="status">Not connected</div>
+        </div>
+        <div>
+          <div class="k">Network</div>
+          <div id="network" class="muted">-</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="k">Address</div>
+          <div id="address" class="muted">-</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <div class="k">ETH Balance</div>
+          <div id="ethBalance">-</div>
+        </div>
+        <div>
+          <div class="k">RewardToken Balance</div>
+          <div id="tokenBalance">-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Create Campaign</h2>
+      <div class="grid">
+        <input id="newTitle" class="input" placeholder="Title" />
+        <input id="newGoal" class="input" placeholder="Goal in ETH (e.g. 0.05)" />
+        <input id="newDays" class="input" placeholder="Duration in days (e.g. 7)" />
+        <button id="createBtn" class="btn">Create</button>
+      </div>
+      <div id="createMsg" class="msg"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Campaigns</h2>
+      <div id="campaigns"></div>
+    </div>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
